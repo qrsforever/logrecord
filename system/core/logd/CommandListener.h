@@ -61,6 +61,9 @@ private:
     LogBufferCmd(SetBufSize)
     LogBufferCmd(GetBufSizeUsed)
     LogBufferCmd(GetStatistics)
+    // QRS BEGIN
+    LogBufferCmd(GetLogRecords)
+    // QRS END
     LogBufferCmd(GetPruneList)
     LogBufferCmd(SetPruneList)
 

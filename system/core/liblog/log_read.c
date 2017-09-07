@@ -503,6 +503,33 @@ ssize_t android_logger_get_statistics(struct logger_list *logger_list,
     return send_log_msg(NULL, NULL, buf, len);
 }
 
+// QRS BEGIN
+/*
+ * returns logrecords
+ */
+ssize_t android_logger_get_logrecords(struct logger_list *logger_list,
+                                      char *buf, size_t len)
+{
+    struct logger *logger;
+    char *cp = buf;
+    size_t remaining = len;
+    size_t n;
+
+    n = snprintf(cp, remaining, "getLogRecords");
+    n = min(n, remaining);
+    remaining -= n;
+    cp += n;
+
+    logger_for_each(logger, logger_list) {
+        n = snprintf(cp, remaining, " %d", logger->id);
+        n = min(n, remaining);
+        remaining -= n;
+        cp += n;
+    }
+    return send_log_msg(NULL, NULL, buf, len);
+}
+// QRS END
+
 ssize_t android_logger_get_prune_list(struct logger_list *logger_list __unused,
                                       char *buf, size_t len)
 {

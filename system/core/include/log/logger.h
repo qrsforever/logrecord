@@ -149,6 +149,10 @@ struct logger_list;
 
 ssize_t android_logger_get_statistics(struct logger_list *logger_list,
                                       char *buf, size_t len);
+// QRS BEGIN
+ssize_t android_logger_get_logrecords(struct logger_list *logger_list,
+                                      char *buf, size_t len);
+// QRS END
 ssize_t android_logger_get_prune_list(struct logger_list *logger_list,
                                       char *buf, size_t len);
 int android_logger_set_prune_list(struct logger_list *logger_list,

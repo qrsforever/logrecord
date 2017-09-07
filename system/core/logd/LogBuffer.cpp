@@ -364,7 +364,7 @@ void LogBuffer::prune(log_id_t id, unsigned long pruneRows, uid_t caller_uid) {
 
     // prune by worst offender by uid
     bool hasBlacklist = mPrune.naughty();
-    // LETV START [DEMETER-39082]: disable worst offender when prune, because sometimes other app
+    // QRS START [DEMETER-39082]: disable worst offender when prune, because sometimes other app
     // will print very much logcat log and logd will occupy very much cpu when prune.
     // System will be very slowly. sometimes will it will delete date other thread is using.
     // And it's not necessery, so disable it.
@@ -513,7 +513,7 @@ void LogBuffer::prune(log_id_t id, unsigned long pruneRows, uid_t caller_uid) {
         }
     }
     #endif /* DISABLE_WORST_OFFENDER */
-    // LETV end
+    // QRS end
 
     bool whitelist = false;
     bool hasWhitelist = mPrune.nice();
@@ -539,7 +539,7 @@ void LogBuffer::prune(log_id_t id, unsigned long pruneRows, uid_t caller_uid) {
             }
             break;
         }
-        // LETV START [DEMETER-39082]: disable worst offender when prune
+        // QRS START [DEMETER-39082]: disable worst offender when prune
         // We just erase log record in blacklist. Now we didn't use blacklist, so it's no effective
         // for us.
         #ifdef DISABLE_WORST_OFFENDER
@@ -549,7 +549,7 @@ void LogBuffer::prune(log_id_t id, unsigned long pruneRows, uid_t caller_uid) {
             continue;
         }
         #endif /* DISABLE_WORST_OFFENDER */
-        // LETV END
+        // QRS END
         if (hasWhitelist && !e->getDropped() && mPrune.nice(e)) { // WhiteListed
             whitelist = true;
             it++;
@@ -694,3 +694,13 @@ void LogBuffer::formatStatistics(char **strp, uid_t uid, unsigned int logMask) {
 
     pthread_mutex_unlock(&mLogElementsLock);
 }
+
+// QRS BEGIN
+void LogBuffer::formatLogRecords(char **strp) {
+    pthread_mutex_lock(&mLogElementsLock);
+
+    stats.formatLogRecords(strp);
+
+    pthread_mutex_unlock(&mLogElementsLock);
+}
+// QRS END

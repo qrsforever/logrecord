@@ -62,6 +62,9 @@ public:
     unsigned long getSizeUsed(log_id_t id);
     // *strp uses malloc, use free to release.
     void formatStatistics(char **strp, uid_t uid, unsigned int logMask);
+    // QRS BEGIN
+    void formatLogRecords(char **strp);
+    // QRS END
 
     void enableStatistics() {
         stats.enableStatistics();

@@ -22,6 +22,7 @@
 #include <sys/types.h>
 
 #include <unordered_map>
+#include <string>
 
 #include <log/log.h>
 
@@ -287,6 +288,56 @@ struct TagEntry : public EntryBase {
     }
 };
 
+// QRS BEGING
+struct LogRecordEntry {
+    unsigned long long count;
+    unsigned long long sizes;
+
+    unsigned long long getCount() const { return count; }
+    unsigned long long getSizes() const { return sizes; }
+
+    LogRecordEntry() : count(0), sizes(0) {}
+
+    inline void add(LogBufferElement* e) {
+        sizes += e->getMsgLen();
+        count++;
+    }
+
+    ~LogRecordEntry() { }
+
+};
+
+#define MAX_CACHE 5
+#define MRU_HIT_DEBUG 1
+class LogRecord {
+public:
+#if MRU_HIT_DEBUG
+    unsigned long long allcount;
+    unsigned long long hitcount;
+#endif
+    LogRecord() : mruIndex(0) {
+#if MRU_HIT_DEBUG
+        allcount = 0;
+        hitcount = 0;
+#endif
+    }
+    ~LogRecord() { }
+    void add(pid_t pid, LogBufferElement *e);
+
+    std::unordered_map<std::string, LogRecordEntry> recordTable;
+    typedef typename std::unordered_map<std::string, LogRecordEntry>::iterator recordIter;
+
+private:
+    struct LogMRUCache {
+        pid_t pid;
+        LogRecordEntry* ref;
+        LogMRUCache():pid(0), ref(0) { }
+    };
+    int mruIndex;
+    LogMRUCache mruCache[MAX_CACHE];
+};
+// QRS END
+
 // Log Statistics
 class LogStatistics {
     size_t mSizes[LOG_ID_MAX];
@@ -311,6 +362,10 @@ class LogStatistics {
     typedef LogHashtable<uint32_t, TagEntry> tagTable_t;
     tagTable_t tagTable;
 
+    // QRS BEGIN
+    LogRecord logRecord;
+    // QRS END
+
 public:
     LogStatistics();
 
@@ -333,6 +388,9 @@ public:
 
     // *strp = malloc, balance with free
     void format(char **strp, uid_t uid, unsigned int logMask);
+    // QRS BEGIN
+    void formatLogRecords(char **strp);
+    // QRS END
 
     // helper (must be locked directly or implicitly by mLogElementsLock)
     char *pidToName(pid_t pid);

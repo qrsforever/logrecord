@@ -42,6 +42,9 @@ CommandListener::CommandListener(LogBuffer *buf, LogReader * /*reader*/,
     registerCmd(new SetBufSizeCmd(buf));
     registerCmd(new GetBufSizeUsedCmd(buf));
     registerCmd(new GetStatisticsCmd(buf));
+    // QRS BEGIN
+    registerCmd(new GetLogRecordsCmd(buf));
+    // QRS END
     registerCmd(new SetPruneListCmd(buf));
     registerCmd(new GetPruneListCmd(buf));
     registerCmd(new ReinitCmd());
@@ -242,6 +245,29 @@ int CommandListener::GetStatisticsCmd::runCommand(SocketClient *cli,
     }
     return 0;
 }
+
+// QRS BEGIN
+CommandListener::GetLogRecordsCmd::GetLogRecordsCmd(LogBuffer *buf) :
+        LogCommand("getLogRecords"),
+        mBuf(*buf) {
+}
+
+int CommandListener::GetLogRecordsCmd::runCommand(SocketClient *cli,
+                                         int /*argc*/, char ** /*argv*/) {
+    setname();
+    char *buf = NULL;
+
+    mBuf.formatLogRecords(&buf);
+    if (!buf) {
+        cli->sendMsg("Failed");
+    } else {
+        package_string(&buf);
+        cli->sendMsg(buf);
+        free(buf);
+    }
+    return 0;
+}
+// QRS END
 
 CommandListener::GetPruneListCmd::GetPruneListCmd(LogBuffer *buf) :
         LogCommand("getPruneList"),

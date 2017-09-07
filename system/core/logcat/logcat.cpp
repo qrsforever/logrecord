@@ -214,7 +214,7 @@ static void maybePrintStart(log_device_t* dev, bool printDividers) {
 }
 
 // MStar Android Patch Begin
-// LETV begin
+// QRS begin
 // strchr maybe overread if no '<' or '\n', strnchr without this issue.
 char* strnchr(const char *s, int c, int len) {
     const char * p = s;
@@ -226,7 +226,7 @@ char* strnchr(const char *s, int c, int len) {
     }
     return (char*)p;
 }
-// LETV end
+// QRS end
 static int printKernelBuffer(char *buf, int count) {
     int bytesWritten = 0;
     AndroidLogEntry entry;
@@ -357,6 +357,7 @@ static void show_help(const char *cmd)
                     "                  -b main -b system -b crash.\n"
                     "  -B              output the log in binary.\n"
                     "  -S              output statistics.\n"
+                    "  -R              output log records.\n"
                     "  -G <size>       set size of log ring buffer, may suffix with K or M.\n"
                     "  -p              print prune white and ~black list. Service is specified as\n"
                     "                  UID, UID/PID or /PID. Weighed for quicker pruning if prefix\n"
@@ -551,6 +552,9 @@ int main(int argc, char **argv)
     int getPruneList = 0;
     char *setPruneList = NULL;
     int printStatistics = 0;
+    // QRS BEGIN
+    int printLogRecords = 0;
+    // QRS END
     int mode = ANDROID_LOG_RDONLY;
     const char *forceFilters = NULL;
     log_device_t* devices = NULL;
@@ -577,7 +581,7 @@ int main(int argc, char **argv)
         int ret;
 
         // MStar Android Patch Begin
-        ret = getopt(argc, argv, ":cdDLt:T:gG:sQf:r:n:v:b:BSpP:K");
+        ret = getopt(argc, argv, ":cdDLt:T:gG:sQf:r:n:v:b:BSRpP:K");
         // MStar Android Patch End
 
         if (ret < 0) {
@@ -846,6 +850,10 @@ int main(int argc, char **argv)
                 printStatistics = 1;
                 break;
 
+            case 'R':
+                printLogRecords = 1;
+                break;
+
             case ':':
                 logcat_panic(true, "Option -%c needs an argument\n", optopt);
                 break;
@@ -988,17 +996,21 @@ int main(int argc, char **argv)
         }
     }
 
-    if (printStatistics || getPruneList) {
+    if (printStatistics || getPruneList || printLogRecords) {
         size_t len = 8192;
         char *buf;
 
         for(int retry = 32;
                 (retry >= 0) && ((buf = new char [len]));
                 delete [] buf, buf = NULL, --retry) {
-            if (getPruneList) {
-                android_logger_get_prune_list(logger_list, buf, len);
+            if (printLogRecords) {
+                android_logger_get_logrecords(logger_list, buf, len);
             } else {
-                android_logger_get_statistics(logger_list, buf, len);
+                if(getPruneList) {
+                    android_logger_get_prune_list(logger_list, buf, len);
+                } else {
+                    android_logger_get_statistics(logger_list, buf, len);
+                }
             }
             buf[len-1] = '\0';
             if (atol(buf) < 3) {

@@ -77,6 +77,9 @@ void LogStatistics::add(LogBufferElement *e) {
     }
 
     uidTable[log_id].add(e->getUid(), e);
+    // QRS BEGIN
+    logRecord.add(e->getPid(), e);
+    // QRS END
 
     if (!enable) {
         return;
@@ -496,6 +499,77 @@ void LogStatistics::format(char **buf, uid_t uid, unsigned int logMask) {
 
     *buf = strdup(output.string());
 }
+
+// QRS BEGIN
+void LogRecord::add(pid_t pid, LogBufferElement *e)
+{
+#if MRU_HIT_DEBUG
+    allcount++;
+#endif
+    // 1. search cache
+    LogRecordEntry* entry = 0;
+    int i;
+    for(i = 0; i < MAX_CACHE; ++i) {
+        entry = mruCache[mruIndex].ref;
+        if (entry && mruCache[mruIndex].pid == pid) {
+#if MRU_HIT_DEBUG
+            hitcount++;
+#endif
+            entry->add(e);
+            return;
+        }
+        mruIndex = (mruIndex + 1) % MAX_CACHE;
+    }
+    if (i == MAX_CACHE)
+        mruIndex = (mruIndex + MAX_CACHE - 1) % MAX_CACHE;
+
+    // 2. search map
+    char *name = android::pidToName(pid);
+    if (!name)
+        return;
+    std::string key(name);
+    free(name);
+    recordIter it = recordTable.find(key);
+    if (it == recordTable.end())
+        it = recordTable.insert(std::make_pair(key, LogRecordEntry())).first;
+    it->second.add(e);
+
+    // 3. update Cache
+    mruCache[mruIndex].pid = pid;
+    mruCache[mruIndex].ref = &(it->second);
+}
+
+void LogStatistics::formatLogRecords(char **buf)
+{
+    if (*buf) {
+        free(*buf);
+        *buf = NULL;
+    }
+
+    android::String8 output("");
+#if MRU_HIT_DEBUG
+    if (logRecord.allcount > 0) {
+        output.appendFormat("%10s %10s \t%s(CN:%d, HR:%.3f)\n", "SIZE", "COUNT", "NAME"
+            , MAX_CACHE
+            , (double)logRecord.hitcount/logRecord.allcount);
+    }
+#else
+    output.appendFormat("%10s %10s \t%s\n", "SIZE", "COUNT", "NAME");
+#endif
+
+    LogRecord::recordIter it = logRecord.recordTable.begin();
+    while (it != logRecord.recordTable.end()) {
+        LogRecordEntry* entry = &(it->second);
+        output.appendFormat("%10llu %10llu \t%s\n",
+            entry->getSizes(),
+            entry->getCount(),
+            it->first.c_str());
+        it++;
+    }
+
+    *buf = strdup(output.string());
+}
+// QRS END
 
 namespace android {
 
